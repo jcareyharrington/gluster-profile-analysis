@@ -146,7 +146,7 @@ class FopProfile:
                 return '%8.0f' % self.min_lat
         elif stat == stat_names[3]:
             if self.max_lat == 0:
-                return ''
+                return '       0'
             else:
                 return '%8.0f' % self.max_lat
         elif stat == stat_names[4]:
@@ -310,7 +310,6 @@ def parse_input(input_pathname):
                 found_cumulative_output = False
 
         elif found_interval_output and all_caps_name.match(ln):
-
             # we found a record we're interested in,
             # accumulate table of data for each gluster function
 
@@ -388,8 +387,11 @@ def gen_per_fop_stats(out_dir_path, stat, duration_type='interval'):
             fops_in_interval = interval_profile.fop_profiles
             all_fop_profile = FopProfile(0, 0, 0, 0)
             for fop in sorted_fop_names:
-                fop_stats = fops_in_interval[fop]
-                all_fop_profile.accumulate(fop_stats)
+                try:
+                    fop_stats = fops_in_interval[fop]
+                    all_fop_profile.accumulate(fop_stats)
+                except KeyError:
+                    pass
             all_fop_profile.normalize_sum()
             #print('intvl: %d' % i)
             #print('ALL FOPs: %s' % all_fop_profile)
@@ -397,16 +399,17 @@ def gen_per_fop_stats(out_dir_path, stat, duration_type='interval'):
                 fop_fh.write('%d, ' % gen_timestamp_ms(i))
             columns = []
             for fop in sorted_fop_names:
-                fop_stats = fops_in_interval[fop]
-                fop_stats.get_pct_lat(
-                    all_fop_profile.avg_lat * all_fop_profile.calls)
                 try:
                     fop_stats = fops_in_interval[fop]
-                except KeyError:
+                    fop_stats.get_pct_lat(
+                        all_fop_profile.avg_lat * all_fop_profile.calls)
+                    fop_stats = fops_in_interval[fop]
                     fops_in_interval[fop] = fop_stats
-                columns.append(
-                    fop_stats.field2str(
-                        stat, interval_profile.duration))
+                    columns.append(
+                        fop_stats.field2str(
+                            stat, interval_profile.duration))
+                except KeyError:
+                    columns.append('       -')
             fop_fh.write(','.join(columns) + '\n')
 
 # generate graphs in 
